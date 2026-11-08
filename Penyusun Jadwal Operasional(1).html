@@ -1,0 +1,582 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Penyusun Jadwal Operasional</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: control bar, collapsible employee sheet, then a full-width roster grid with sticky name columns, shaped like the store's spreadsheet. */
+:root{
+  --bg:#edf0f3; --surface:#ffffff; --surface-2:#f3f6f8; --ink:#13202b; --ink-2:#51636f;
+  --line:#d3dbe1; --line-strong:#9fb0bb;
+  --accent:#0b5cab; --accent-ink:#ffffff;
+  --sun-bg:#d62828; --sun-fg:#ffffff; --we-bg:#f0f3f6; --s-bg:#e6eff9;
+  --x-bg:#ffd9d2; --x-fg:#9c2511;
+  --ct-bg:#ffe9a8; --ct-fg:#6d4a00;
+  --op-bg:#e0d9ff; --op-fg:#43339a;
+  --m-bg:#cfe9f6; --m-fg:#0b4a6e;
+  --warn-bg:#fff2d1; --warn-fg:#6d4a00; --ok-fg:#1d6b3a;
+  --g-pj:#2ed3e8; --g-csa:#f4e04d; --g-book:#8eaadb; --g-nonbook:#b9a9dd;
+  --g-sac:#e8873a; --g-pkl:#8fcbdc; --g-sec:#f6bd8c; --on-group:#10202a;
+  --font-display:'Archivo',system-ui,sans-serif;
+  --font-body:'IBM Plex Sans',system-ui,sans-serif;
+  --font-mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f151b; --surface:#161e26; --surface-2:#1c2630; --ink:#e7edf2; --ink-2:#9db0bd;
+    --line:#2b3945; --line-strong:#41535f;
+    --accent:#6cb2ff; --accent-ink:#06223f;
+    --sun-bg:#b3261e; --we-bg:#1a232c; --s-bg:#1b2b3c;
+    --x-bg:#5a2a24; --x-fg:#ffbfb2; --ct-bg:#5a4511; --ct-fg:#ffe18a;
+    --op-bg:#3a3363; --op-fg:#cfc6ff; --m-bg:#17475f; --m-fg:#bfe6fa;
+    --warn-bg:#3b3112; --warn-fg:#ffe18a; --ok-fg:#7fd49d;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f151b; --surface:#161e26; --surface-2:#1c2630; --ink:#e7edf2; --ink-2:#9db0bd;
+  --line:#2b3945; --line-strong:#41535f;
+  --accent:#6cb2ff; --accent-ink:#06223f;
+  --sun-bg:#b3261e; --we-bg:#1a232c; --s-bg:#1b2b3c;
+  --x-bg:#5a2a24; --x-fg:#ffbfb2; --ct-bg:#5a4511; --ct-fg:#ffe18a;
+  --op-bg:#3a3363; --op-fg:#cfc6ff; --m-bg:#17475f; --m-fg:#bfe6fa;
+  --warn-bg:#3b3112; --warn-fg:#ffe18a; --ok-fg:#7fd49d;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.5}
+.wrap{max-width:1320px;margin:0 auto;padding-block:24px 40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:flex;flex-direction:column;gap:16px}
+h1{font:800 26px/1.15 var(--font-display);letter-spacing:-.01em;margin:0;text-wrap:balance}
+.lede{margin:6px 0 0;color:var(--ink-2);max-width:68ch}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px;min-width:0}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+label,.lbl{font:600 11px var(--font-display);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+input,select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line-strong);border-radius:4px;padding:7px 9px;min-width:0;width:100%}
+input::placeholder{color:var(--ink-2);opacity:.7}
+.f{display:flex;flex-direction:column;gap:4px;min-width:0}
+.btn{font:700 13px var(--font-display);letter-spacing:.03em;border-radius:4px;padding:9px 16px;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.small{padding:6px 12px;font-size:12px}
+.ctl-grid{display:grid;grid-template-columns:200px 110px minmax(200px,1fr) auto;gap:12px;align-items:end}
+.dirty{margin:12px 0 0;padding:8px 12px;background:var(--warn-bg);color:var(--warn-fg);border-radius:4px}
+
+details.panel>summary{cursor:pointer;font:700 15px var(--font-display);list-style:none;display:flex;justify-content:space-between;gap:12px;align-items:baseline}
+details.panel>summary::-webkit-details-marker{display:none}
+details.panel>summary::after{content:"Sembunyikan";font:500 12px var(--font-body);color:var(--ink-2)}
+details.panel:not([open])>summary::after{content:"Tampilkan"}
+.sheet-note{margin:6px 0 0;color:var(--ink-2)}
+.grp-block{margin-top:18px}
+.chip{display:inline-block;font:700 11px var(--font-display);letter-spacing:.07em;padding:3px 10px;border-radius:3px;color:var(--on-group)}
+.emp-head,.emp-row{display:grid;grid-template-columns:24px minmax(130px,1.1fr) 76px 176px minmax(190px,2fr) 32px;gap:8px;align-items:start}
+.emp-head{margin:8px 0 4px;font:600 11px var(--font-display);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+.emp{padding:6px 0}
+.emp+.emp{border-top:1px solid var(--line)}
+.emp-row{padding:0}
+.emp-leave{display:grid;grid-template-columns:76px minmax(120px,1fr) 76px minmax(120px,1fr);gap:8px;margin:6px 0 0 32px;align-items:start}
+.emp-row .no{font:500 12px var(--font-mono);color:var(--ink-2);padding-top:9px;text-align:right}
+.emp-row .lbl{display:none}
+.hint{font-size:12px;color:var(--ink-2);min-height:16px}
+.hint.bad{color:var(--x-fg)}
+.rm{border:1px solid var(--line);background:transparent;color:var(--ink-2);border-radius:4px;height:34px;width:32px;font-size:18px;line-height:1;cursor:pointer}
+.rm:hover{color:var(--x-fg);border-color:var(--x-fg)}
+.add{margin-top:6px}
+
+.roster-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px;margin-bottom:12px}
+.roster-title{font:800 15px/1.3 var(--font-display);letter-spacing:.02em;text-transform:uppercase}
+.roster-title span{display:block;font-weight:700;color:var(--ink-2)}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.stat{margin:0 0 8px;color:var(--ink-2)}
+.notes{margin:0 0 12px;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px}
+.notes li{padding:6px 10px;border-radius:4px;background:var(--warn-bg);color:var(--warn-fg);font-size:13px}
+.notes li.ok{background:transparent;color:var(--ok-fg);padding-left:0}
+.roster-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:4px;background:var(--surface)}
+table.roster{border-collapse:separate;border-spacing:0;table-layout:fixed;font-family:var(--font-mono);font-size:12px}
+.roster th,.roster td{border-right:1px solid var(--line);border-bottom:1px solid var(--line);text-align:center;padding:0;height:25px;overflow:hidden}
+.roster tr.gap td{height:8px;background:var(--bg);border:0;position:static}
+.roster th.grp{position:sticky;left:0;z-index:3;font:800 12px var(--font-display);letter-spacing:.04em;color:var(--on-group);border-right:2px solid var(--line-strong)}
+.roster th.dn,.roster th.dw,.roster th.tth{background:var(--surface-2);color:var(--ink);font-weight:600}
+.roster th.dw{color:var(--ink-2);font-weight:500;font-size:11px}
+.roster th.sat{background:var(--we-bg)}
+.roster th.sun{background:var(--sun-bg);color:var(--sun-fg)}
+.roster td.c-no,.roster td.c-nm,.roster td.c-lbl{position:sticky;z-index:2;background:var(--surface)}
+.roster td.c-no{left:0;color:var(--ink-2)}
+.roster td.c-nm{left:28px;text-align:left;padding-left:8px;font:600 12px var(--font-body);text-transform:uppercase;white-space:nowrap;text-overflow:ellipsis;border-right:2px solid var(--line-strong)}
+.roster td.c-lbl{left:0;text-align:left;padding-left:8px;font:700 11px var(--font-display);letter-spacing:.06em;border-right:2px solid var(--line-strong)}
+.roster td.cell{position:relative;cursor:pointer;user-select:none;font-weight:500;color:var(--ink)}
+.roster td.we{background:var(--we-bg)}
+.roster td.k-S{background:var(--s-bg)}
+.roster td.k-X{background:var(--x-bg);color:var(--x-fg);font-weight:700}
+.roster td.k-CT{background:var(--ct-bg);color:var(--ct-fg);font-weight:700}
+.roster td.k-OP{background:var(--op-bg);color:var(--op-fg);font-weight:700}
+.roster td.k-M{background:var(--m-bg);color:var(--m-fg);font-weight:700}
+.roster td.cell:hover{outline:2px solid var(--accent);outline-offset:-2px}
+.roster td.cell:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.roster td.rq::after{content:"";position:absolute;top:0;right:0;border-top:7px solid var(--accent);border-left:7px solid transparent}
+.roster td.tt{font-weight:600;background:var(--surface-2)}
+.roster td.tt.diff{color:var(--x-fg);text-decoration:underline}
+.roster tr.foot td{background:var(--surface-2);font-weight:600;color:var(--ink-2)}
+.roster tr.foot td.c-lbl{background:var(--surface-2)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin:12px 0 0;padding:0;list-style:none;color:var(--ink-2);font-size:12px}
+.legend li{display:flex;align-items:center;gap:6px}
+.sw{display:inline-block;min-width:24px;padding:1px 4px;text-align:center;font:600 11px var(--font-mono);border:1px solid var(--line);border-radius:2px;color:var(--ink);background:var(--surface)}
+.sw.s{background:var(--s-bg)} .sw.x{background:var(--x-bg);color:var(--x-fg)} .sw.ct{background:var(--ct-bg);color:var(--ct-fg)}
+.sw.op{background:var(--op-bg);color:var(--op-fg)} .sw.m{background:var(--m-bg);color:var(--m-fg)}
+.sw.rq{position:relative}
+.sw.rq::after{content:"";position:absolute;top:0;right:0;border-top:6px solid var(--accent);border-left:6px solid transparent}
+#fallback{margin-top:12px}
+#fallback textarea{width:100%;height:120px;font:12px var(--font-mono);color:var(--ink);background:var(--surface);border:1px solid var(--line-strong);border-radius:4px;padding:8px}
+#live{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+@media (max-width:760px){
+  .ctl-grid{grid-template-columns:1fr 100px}
+  .ctl-grid .f-store,.ctl-grid .f-go{grid-column:1 / -1}
+  .emp-head{display:none}
+  .emp-row{grid-template-columns:24px 1fr 80px 32px;row-gap:6px}
+  .emp-leave{grid-template-columns:80px 1fr}
+  .emp-row .lbl{display:block}
+  .emp-row .f-shift{grid-column:2 / 4}
+  .emp-row .f-req{grid-column:2 / 5}
+  .emp-row .rm{grid-column:4;grid-row:1;align-self:end}
+  .emp-row .no{padding-top:26px}
+}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Penyusun jadwal operasional</h1>
+    <p class="lede">Pilih bulan, isi tanggal request libur dan total off tiap karyawan. Off diletakkan di hari kerja (Senin sampai Jumat) dan disebar merata. Request libur di akhir pekan tetap dipenuhi. Cuti dan OP (cuti pengganti lembur) juga bisa diminta per tanggal.</p>
+  </header>
+
+  <section class="panel" aria-label="Pengaturan jadwal">
+    <div class="ctl-grid">
+      <div class="f"><label for="mo">Bulan</label><select id="mo"></select></div>
+      <div class="f"><label for="yr">Tahun</label><input id="yr" type="number" min="2020" max="2100" inputmode="numeric"></div>
+      <div class="f f-store"><label for="store">Nama toko</label><input id="store" autocomplete="off"></div>
+      <div class="f f-go"><button id="go" class="btn primary" type="button">Buat jadwal</button></div>
+    </div>
+    <p id="dirty" class="dirty" hidden>Data karyawan berubah. Tekan Buat jadwal untuk menerapkannya.</p>
+  </section>
+
+  <details class="panel" id="sheet" open>
+    <summary>Karyawan, total off dan request libur</summary>
+    <p class="sheet-note">Tulis tanggal dipisah koma, rentang boleh dipakai. Contoh: 5, 12, 20-22. Cuti (CT) dan OP dihitung terpisah dari total off. OP adalah cuti pengganti karena lembur. Jika jumlah hari lebih besar dari tanggal yang diisi, sisanya ditempatkan otomatis di hari kerja secara berurutan.</p>
+    <div id="formRoot"></div>
+  </details>
+
+  <section class="panel" aria-label="Jadwal hasil">
+    <div class="roster-head">
+      <div class="roster-title"><div id="rtStore"></div><span id="rtMonth"></span></div>
+      <div class="actions">
+        <button id="copy" class="btn small" type="button">Salin tabel untuk Excel</button>
+      </div>
+    </div>
+    <p id="stat" class="stat"></p>
+    <ul id="notes" class="notes"></ul>
+    <div id="rosterScroll" class="roster-scroll"></div>
+    <ul class="legend" aria-label="Keterangan kode">
+      <li><span class="sw">P</span>Pagi</li>
+      <li><span class="sw s">S</span>Siang</li>
+      <li><span class="sw x">X</span>Off</li>
+      <li><span class="sw ct">CT</span>Cuti</li>
+      <li><span class="sw op">OP</span>Cuti pengganti lembur</li>
+      <li><span class="sw m">M</span>Kode manual</li>
+      <li><span class="sw rq">X</span>Segitiga di sudut: tanggal request</li>
+      <li>Klik sel untuk mengganti kode, atau fokus lalu tekan Enter. Panah untuk berpindah sel.</li>
+    </ul>
+    <div id="fallback" hidden>
+      <p class="sheet-note">Browser menolak menyalin otomatis. Teks di bawah sudah terpilih, tekan Ctrl+C lalu tempel di Excel.</p>
+      <textarea id="fbText" aria-label="Isi tabel untuk disalin" readonly></textarea>
+    </div>
+  </section>
+  <div id="live" role="status" aria-live="polite"></div>
+</div>
+
+<script>
+/*LOGIC_START*/
+const MONTHS=['JANUARI','FEBRUARI','MARET','APRIL','MEI','JUNI','JULI','AGUSTUS','SEPTEMBER','OKTOBER','NOVEMBER','DESEMBER'];
+const DOW=['MG','SN','SL','RB','KM','JM','SB'];
+const GROUPS=[
+  {id:'pj',name:'PEN.JAWAB'},{id:'csa',name:'SOA CSA&CASHIER'},{id:'book',name:'SOA BOOK'},
+  {id:'nonbook',name:'SOA NON BOOK'},{id:'sac',name:'SAC&GUDANG'},{id:'pkl',name:'PKL'},{id:'sec',name:'SECURITY'}
+];
+function defaultEmps(){
+  const L=[
+    ['pj',['Dewi','Ericha','Adi','Well','Susi'],5],
+    ['csa',['Radit','Grianta','Evan (DW)'],5],
+    ['book',['Almira (DW)','Leon','Dave'],5],
+    ['nonbook',['Suwarni','Ngurah','Ayu (DW)'],5],
+    ['sac',['Yeni','Zeb'],5],
+    ['pkl',['Sintia','Kimberly','Pabian','Adrian','Rifqi'],9],
+    ['sec',['Martin'],5]
+  ];
+  let n=0;const out=[];
+  L.forEach(([g,names,off])=>names.forEach(nm=>{out.push({id:'e'+(++n),g,name:nm,off,shift:g==='sec'?'S':'ROT',req:'',ct:0,ctReq:'',op:0,opReq:''});}));
+  return out;
+}
+function daysIn(y,m){return new Date(y,m,0).getDate();}
+function dowOf(y,m,d){return new Date(y,m-1,d).getDay();}
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function parseRequests(text,days){
+  const out=new Set(),bad=[];
+  String(text||'').replace(/\s*[-–]\s*/g,'-').split(/[,;\s]+/).filter(Boolean).forEach(tok=>{
+    const m=tok.match(/^(\d{1,2})(?:-(\d{1,2}))?$/);
+    if(!m){bad.push(tok);return;}
+    let a=+m[1],b=m[2]?+m[2]:a;
+    if(b<a){const t=a;a=b;b=t;}
+    for(let d=a;d<=b;d++){if(d>=1&&d<=days)out.add(d);else bad.push(String(d));}
+  });
+  return {days:[...out].sort((x,y)=>x-y),bad:[...new Set(bad)]};
+}
+function generate(y,m,emps,seed){
+  const days=daysIn(y,m),rnd=mulberry32(seed);
+  const dow=d=>dowOf(y,m,d);
+  const offset=(dow(1)+6)%7;
+  const gsize={},gi={};
+  emps.forEach(e=>{gi[e.id]=gsize[e.g]||0;gsize[e.g]=(gsize[e.g]||0)+1;});
+  const sched={},req={},warnings=[],groupOff={},totalOff=new Array(days+1).fill(0);
+  Object.keys(gsize).forEach(g=>{groupOff[g]=new Array(days+1).fill(0);});
+  const gname=id=>(GROUPS.find(g=>g.id===id)||{name:id}).name;
+  const LBL={CT:'cuti',OP:'OP',X:'libur'};
+  const remX={},remCT={},remOP={};
+  const num=v=>Math.max(0,Math.min(31,parseInt(v,10)||0));
+  emps.forEach(e=>{
+    const row=[];
+    for(let d=1;d<=days;d++){
+      if(e.shift==='P'||e.shift==='S')row.push(e.shift);
+      else row.push(((Math.floor((d-1+offset)/7)+gi[e.id])%2===0)?'P':'S');
+    }
+    sched[e.id]=row;req[e.id]=[];
+    const taken={},placed={CT:0,OP:0,X:0};
+    [['CT',e.ctReq],['OP',e.opReq],['X',e.req]].forEach(([type,txt])=>{
+      const pr=parseRequests(txt,days);
+      if(pr.bad.length)warnings.push(e.name+': tanggal request '+LBL[type]+' tidak valid ('+pr.bad.join(', ')+')');
+      pr.days.forEach(d=>{
+        if(taken[d]){warnings.push(e.name+': tanggal '+d+' diminta untuk '+LBL[taken[d]]+' dan '+LBL[type]+', yang dipakai '+LBL[taken[d]]);return;}
+        taken[d]=type;row[d-1]=type;req[e.id].push(d);groupOff[e.g][d]++;totalOff[d]++;placed[type]++;
+      });
+    });
+    if(placed.X>e.off)warnings.push(e.name+': request libur ('+placed.X+' hari) melebihi total off ('+e.off+')');
+    if(e.off>days)warnings.push(e.name+': total off melebihi jumlah hari dalam bulan');
+    remCT[e.id]=Math.max(0,Math.min(num(e.ct),days)-placed.CT);
+    remOP[e.id]=Math.max(0,Math.min(num(e.op),days)-placed.OP);
+    remX[e.id]=Math.max(0,Math.min(e.off,days)-placed.X);
+  });
+  const place=(type,rem)=>{
+    const maxR=Math.max(0,...Object.values(rem));
+    for(let r=0;r<maxR;r++){
+      const order=emps.filter(e=>rem[e.id]>0);
+      for(let i=order.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[order[i],order[j]]=[order[j],order[i]];}
+      order.forEach(e=>{
+        const row=sched[e.id],absent=[],same=[],free=[];
+        for(let d=1;d<=days;d++){
+          const c=row[d-1];
+          if(c==='P'||c==='S')free.push(d);
+          else{absent.push(d);if(c===type)same.push(d);}
+        }
+        let cand=free.filter(d=>{const w=dow(d);return w>=1&&w<=5;});
+        if(!cand.length)cand=free.filter(d=>dow(d)===6);
+        if(!cand.length)cand=free;
+        if(!cand.length){rem[e.id]=0;return;}
+        const ideal=days/Math.max(1,e.off);
+        let best=-1,bs=Infinity;
+        cand.forEach(d=>{
+          let s=groupOff[e.g][d]*100+totalOff[d]*4+rnd()*2;
+          if(gsize[e.g]>=2&&groupOff[e.g][d]>=gsize[e.g]-1)s+=1000;
+          if(type==='X'){
+            let dist=Infinity;absent.forEach(o=>{dist=Math.min(dist,Math.abs(o-d));});
+            if(dist===1)s+=60;
+            if(dist!==Infinity)s-=Math.min(dist,ideal)*3;
+          }else{
+            if(same.some(o=>Math.abs(o-d)===1))s-=8;
+          }
+          if(s<bs){bs=s;best=d;}
+        });
+        row[best-1]=type;groupOff[e.g][best]++;totalOff[best]++;rem[e.id]--;
+      });
+    }
+  };
+  place('CT',remCT);place('OP',remOP);place('X',remX);
+  emps.forEach(e=>{
+    let forced=0;
+    sched[e.id].forEach((c,i)=>{
+      if(c==='X'||c==='CT'||c==='OP'){const w=dow(i+1);if((w===0||w===6)&&!req[e.id].includes(i+1))forced++;}
+    });
+    if(forced)warnings.push(e.name+': '+forced+' hari libur terpaksa jatuh di akhir pekan karena hari kerja tidak cukup');
+  });
+  Object.keys(gsize).forEach(g=>{
+    if(gsize[g]<2)return;
+    const ds=[];for(let d=1;d<=days;d++){if(groupOff[g][d]>=gsize[g])ds.push(d);}
+    if(ds.length)warnings.push(gname(g)+': semua karyawan tidak masuk pada tanggal '+ds.join(', ')+' (dari request)');
+  });
+  return {y,m,days,sched,req,warnings,seed};
+}
+/*LOGIC_END*/
+
+(function(){
+const $=s=>document.querySelector(s);
+const STORE_KEY='jadwal-operasional-v1';
+const CODES=['P','S','X','CT','OP','M'];
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const title=s=>s.charAt(0)+s.slice(1).toLowerCase();
+
+let S={y:2026,m:11,store:'TB GRAMEDIA DUTA PLAZA',emps:defaultEmps(),result:null,seed:20261108,dirty:false,focus:null};
+let nextId=1000;
+
+function save(){try{localStorage.setItem(STORE_KEY,JSON.stringify({y:S.y,m:S.m,store:S.store,emps:S.emps,result:S.result,seed:S.seed,nextId}));}catch(e){}}
+function load(){
+  try{
+    const raw=localStorage.getItem(STORE_KEY);if(!raw)return;
+    const o=JSON.parse(raw);
+    if(!o||!Array.isArray(o.emps)||!o.emps.every(e=>e&&e.id&&e.g&&typeof e.name==='string'))return;
+    S.y=+o.y||S.y;S.m=+o.m||S.m;S.store=typeof o.store==='string'?o.store:S.store;
+    S.emps=o.emps;S.emps.forEach(e=>{e.req=e.req||'';e.ct=e.ct||0;e.op=e.op||0;e.ctReq=e.ctReq||'';e.opReq=e.opReq||'';});S.seed=o.seed||S.seed;nextId=o.nextId||nextId;
+    if(o.result&&o.result.sched&&o.result.y===S.y&&o.result.m===S.m)S.result=o.result;
+  }catch(e){}
+}
+function orderedEmps(){const out=[];GROUPS.forEach(g=>S.emps.forEach(e=>{if(e.g===g.id)out.push(e);}));return out;}
+function say(t){$('#live').textContent='';setTimeout(()=>{$('#live').textContent=t;},30);}
+
+function generateNow(){
+  S.seed=Math.floor(Math.random()*1e9);
+  S.result=generate(S.y,S.m,S.emps,S.seed);
+  S.dirty=false;S.focus=null;
+}
+
+/* ---------- controls ---------- */
+function renderControls(){
+  $('#mo').innerHTML=MONTHS.map((n,i)=>'<option value="'+(i+1)+'"'+(i+1===S.m?' selected':'')+'>'+title(n)+'</option>').join('');
+  $('#yr').value=S.y;$('#store').value=S.store;
+  $('#dirty').hidden=!S.dirty;
+}
+
+/* ---------- employee form ---------- */
+function hintFor(e,key,tot){
+  const days=daysIn(S.y,S.m),pr=parseRequests(e[key],days);
+  if(pr.bad.length)return {t:'Tidak valid atau di luar bulan: '+pr.bad.join(', '),bad:true};
+  let t=pr.days.length?pr.days.length+' hari: '+pr.days.join(', '):'';
+  const total=parseInt(e[tot],10)||0;
+  if(total>pr.days.length)t+=(t?'. ':'')+(total-pr.days.length)+' hari lagi dicarikan otomatis';
+  return {t,bad:false};
+}
+function hintHTML(id,e,key,tot){const h=hintFor(e,key,tot);return '<span class="hint'+(h.bad?' bad':'')+'" id="'+id+e.id+'">'+esc(h.t)+'</span>';}
+function empRow(e,i){
+  const sel=(v,l)=>'<option value="'+v+'"'+(e.shift===v?' selected':'')+'>'+l+'</option>';
+  const num=(id,f,lab,v)=>'<div class="f"><label class="lbl" for="'+id+e.id+'">'+lab+'</label><input id="'+id+e.id+'" type="number" min="0" max="31" inputmode="numeric" data-f="'+f+'" data-e="'+e.id+'" value="'+v+'"></div>';
+  const txt=(id,f,lab,v,hid,tot)=>'<div class="f"><label class="lbl" for="'+id+e.id+'">'+lab+'</label><input id="'+id+e.id+'" data-f="'+f+'" data-e="'+e.id+'" placeholder="mis. 5, 12, 20-22" value="'+esc(v)+'" autocomplete="off">'+hintHTML(hid,e,f,tot)+'</div>';
+  return '<div class="emp"><div class="emp-row">'
+   +'<span class="no">'+(i+1)+'</span>'
+   +'<div class="f f-name"><label class="lbl" for="n-'+e.id+'">Nama</label><input id="n-'+e.id+'" data-f="name" data-e="'+e.id+'" value="'+esc(e.name)+'" autocomplete="off"></div>'
+   +'<div class="f f-off"><label class="lbl" for="o-'+e.id+'">Total off</label><input id="o-'+e.id+'" type="number" min="0" max="31" inputmode="numeric" data-f="off" data-e="'+e.id+'" value="'+e.off+'"></div>'
+   +'<div class="f f-shift"><label class="lbl" for="s-'+e.id+'">Shift</label><select id="s-'+e.id+'" data-f="shift" data-e="'+e.id+'">'+sel('ROT','Rotasi P/S per minggu')+sel('P','Pagi tetap (P)')+sel('S','Siang tetap (S)')+'</select></div>'
+   +'<div class="f f-req"><label class="lbl" for="r-'+e.id+'">Request libur</label><input id="r-'+e.id+'" data-f="req" data-e="'+e.id+'" placeholder="mis. 5, 12, 20-22" value="'+esc(e.req)+'" autocomplete="off">'+hintHTML('h-',e,'req','off')+'</div>'
+   +'<button type="button" class="rm" data-rm="'+e.id+'" aria-label="Hapus '+esc(e.name)+'">&times;</button>'
+   +'</div><div class="emp-leave">'
+   +num('c-','ct','Jumlah cuti',e.ct)+txt('cr-','ctReq','Request cuti (CT)',e.ctReq,'hc-','ct')
+   +num('p-','op','Jumlah OP',e.op)+txt('pr-','opReq','Request OP (pengganti lembur)',e.opReq,'ho-','op')
+   +'</div></div>';
+}
+function renderForm(){
+  let h='';
+  GROUPS.forEach(g=>{
+    const list=S.emps.filter(e=>e.g===g.id);
+    h+='<div class="grp-block"><span class="chip" style="background:var(--g-'+g.id+')">'+g.name+'</span>';
+    if(list.length)h+='<div class="emp-head"><span></span><span>Nama</span><span>Total off</span><span>Shift</span><span>Request libur (tanggal)</span><span></span></div>';
+    h+=list.map(empRow).join('');
+    h+='<button type="button" class="btn small add" data-add="'+g.id+'">Tambah karyawan</button></div>';
+  });
+  $('#formRoot').innerHTML=h;
+}
+function updHints(e){
+  [['req','off','h-'],['ctReq','ct','hc-'],['opReq','op','ho-']].forEach(([k,t,pre])=>{
+    const el=document.getElementById(pre+e.id);if(!el)return;
+    const h=hintFor(e,k,t);el.textContent=h.t;el.className='hint'+(h.bad?' bad':'');
+  });
+}
+function refreshHints(){S.emps.forEach(updHints);}
+function markDirty(){S.dirty=true;$('#dirty').hidden=false;save();}
+
+/* ---------- roster ---------- */
+function counts(row){let x=0,ct=0,op=0;if(row)row.forEach(c=>{if(c==='X')x++;else if(c==='CT')ct++;else if(c==='OP')op++;});return {x,ct,op};}
+function renderRoster(){
+  const r=S.result;if(!r)return;
+  const n=daysIn(r.y,r.m),box=$('#rosterScroll'),sl=box.scrollLeft;
+  const wcls=d=>{const w=dowOf(r.y,r.m,d);return w===0?'sun':(w===6?'sat':'');};
+  let h='<table class="roster" role="grid" aria-label="Jadwal '+title(MONTHS[r.m-1])+' '+r.y+'" style="width:'+(160+n*30+120)+'px"><colgroup><col style="width:28px"><col style="width:132px">'
+    +'<col style="width:30px">'.repeat(n)+'<col style="width:40px">'.repeat(3)+'</colgroup><tbody>';
+  const offDay=new Array(n+1).fill(0);
+  let first=true,tx=0,tct=0,top=0;
+  GROUPS.forEach(g=>{
+    const list=S.emps.filter(e=>e.g===g.id);if(!list.length)return;
+    if(!first)h+='<tr class="gap"><td colspan="'+(n+5)+'"></td></tr>';
+    first=false;
+    h+='<tr><th class="grp" colspan="2" rowspan="2" style="background:var(--g-'+g.id+')">'+g.name+'</th>';
+    for(let d=1;d<=n;d++)h+='<th class="dn '+wcls(d)+'">'+d+'</th>';
+    h+='<th class="tth" rowspan="2">X</th><th class="tth" rowspan="2">CT</th><th class="tth" rowspan="2">OP</th></tr><tr>';
+    for(let d=1;d<=n;d++)h+='<th class="dw '+wcls(d)+'">'+DOW[dowOf(r.y,r.m,d)]+'</th>';
+    h+='</tr>';
+    list.forEach((e,i)=>{
+      const row=r.sched[e.id],rq=r.req[e.id]||[];
+      h+='<tr><td class="c-no">'+(i+1)+'</td><td class="c-nm" title="'+esc(e.name)+'">'+esc(e.name)+'</td>';
+      for(let d=1;d<=n;d++){
+        const code=row?row[d-1]:'';
+        if(code==='X')offDay[d]++;
+        const w=dowOf(r.y,r.m,d);
+        const cls='cell k-'+(code||'E')+((w===0||w===6)?' we':'')+((code==='X'||code==='CT'||code==='OP')&&rq.includes(d)?' rq':'');
+        h+='<td class="'+cls+'" data-e="'+e.id+'" data-d="'+d+'" tabindex="-1" role="gridcell" aria-label="'+esc(e.name)+' tanggal '+d+': '+(code||'kosong')+'">'+code+'</td>';
+      }
+      const c=counts(row);tx+=c.x;tct+=c.ct;top+=c.op;
+      h+='<td class="tt'+(row&&c.x!==e.off?' diff':'')+'" title="Target off: '+e.off+'">'+c.x+'</td><td class="tt">'+c.ct+'</td><td class="tt">'+c.op+'</td></tr>';
+    });
+  });
+  h+='<tr class="gap"><td colspan="'+(n+5)+'"></td></tr><tr class="foot"><td class="c-lbl" colspan="2">TOTAL OFF</td>';
+  for(let d=1;d<=n;d++)h+='<td class="'+(wcls(d)==='sun'||wcls(d)==='sat'?'we':'')+'">'+offDay[d]+'</td>';
+  h+='<td>'+tx+'</td><td>'+tct+'</td><td>'+top+'</td></tr></tbody></table>';
+  box.innerHTML=h;box.scrollLeft=sl;
+  $('#rtStore').textContent=S.store.toUpperCase();
+  $('#rtMonth').textContent='JADWAL OPERASIONAL '+MONTHS[r.m-1]+' '+r.y;
+  const all=[...box.querySelectorAll('td.cell')];
+  let target=S.focus&&box.querySelector('td.cell[data-e="'+S.focus.e+'"][data-d="'+S.focus.d+'"]');
+  if(!target)target=all[0];
+  if(target)target.tabIndex=0;
+}
+function renderStatus(){
+  const r=S.result;if(!r)return;
+  let nX=0,nCT=0,nOP=0,wk=0;
+  S.emps.forEach(e=>{const row=r.sched[e.id];if(!row)return;row.forEach((c,i)=>{
+    if(c==='X'||c==='CT'||c==='OP'){
+      if(c==='X')nX++;else if(c==='CT')nCT++;else nOP++;
+      const w=dowOf(r.y,r.m,i+1);if(w===0||w===6)wk++;
+    }
+  });});
+  $('#stat').textContent=S.emps.length+' karyawan, '+nX+' hari off, '+nCT+' hari cuti, '+nOP+' hari OP. Libur di akhir pekan: '+wk+(wk?' (dari request)':'');
+  const ul=$('#notes');
+  if(r.warnings.length)ul.innerHTML=r.warnings.map(w=>'<li>'+esc(w)+'</li>').join('');
+  else ul.innerHTML='<li class="ok">Semua request terpenuhi dan tidak ada bentrokan jadwal.</li>';
+}
+function renderAll(){renderControls();renderForm();renderRoster();renderStatus();}
+
+/* ---------- cell editing ---------- */
+function focusCell(e,d){
+  const box=$('#rosterScroll');
+  const old=box.querySelector('td.cell[tabindex="0"]');if(old)old.tabIndex=-1;
+  const td=box.querySelector('td.cell[data-e="'+e+'"][data-d="'+d+'"]');
+  if(td){td.tabIndex=0;td.focus();S.focus={e,d};}
+}
+function cycleCell(eid,d){
+  const row=S.result.sched[eid];if(!row)return;
+  const i=CODES.indexOf(row[d-1]);
+  row[d-1]=CODES[(i+1)%CODES.length];
+  if(row[d-1]!=='X'&&row[d-1]!=='CT'&&row[d-1]!=='OP'){const rq=S.result.req[eid]||[];const k=rq.indexOf(d);if(k>-1)rq.splice(k,1);}
+  S.focus={e:eid,d};save();renderRoster();renderStatus();focusCell(eid,d);
+}
+$('#rosterScroll').addEventListener('click',ev=>{
+  const td=ev.target.closest('td.cell');if(!td)return;
+  cycleCell(td.dataset.e,+td.dataset.d);
+});
+$('#rosterScroll').addEventListener('keydown',ev=>{
+  const td=ev.target.closest('td.cell');if(!td)return;
+  const e=td.dataset.e,d=+td.dataset.d,n=S.result.days,list=orderedEmps(),i=list.findIndex(x=>x.id===e);
+  if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();cycleCell(e,d);return;}
+  let ni=i,nd=d;
+  if(ev.key==='ArrowRight')nd=Math.min(n,d+1);
+  else if(ev.key==='ArrowLeft')nd=Math.max(1,d-1);
+  else if(ev.key==='ArrowDown')ni=Math.min(list.length-1,i+1);
+  else if(ev.key==='ArrowUp')ni=Math.max(0,i-1);
+  else return;
+  ev.preventDefault();focusCell(list[ni].id,nd);
+});
+
+/* ---------- form events ---------- */
+$('#formRoot').addEventListener('input',ev=>{
+  const t=ev.target,id=t.dataset.e,f=t.dataset.f;if(!id)return;
+  const e=S.emps.find(x=>x.id===id);if(!e)return;
+  if(f==='name')e.name=t.value;
+  else if(f==='off'||f==='ct'||f==='op'){e[f]=Math.max(0,Math.min(31,parseInt(t.value,10)||0));updHints(e);}
+  else if(f==='req'||f==='ctReq'||f==='opReq'){e[f]=t.value;updHints(e);}
+  else return;
+  markDirty();
+});
+$('#formRoot').addEventListener('change',ev=>{
+  const t=ev.target;if(t.dataset.f!=='shift')return;
+  const e=S.emps.find(x=>x.id===t.dataset.e);if(!e)return;
+  e.shift=t.value;markDirty();
+});
+$('#formRoot').addEventListener('click',ev=>{
+  const rm=ev.target.closest('[data-rm]'),add=ev.target.closest('[data-add]');
+  if(rm){
+    S.emps=S.emps.filter(e=>e.id!==rm.dataset.rm);markDirty();renderForm();say('Karyawan dihapus');
+  }else if(add){
+    const g=add.dataset.add,id='e'+(++nextId);
+    S.emps.push({id,g,name:'',off:g==='pkl'?9:5,shift:g==='sec'?'S':'ROT',req:'',ct:0,ctReq:'',op:0,opReq:''});
+    markDirty();renderForm();
+    const inp=document.getElementById('n-'+id);if(inp)inp.focus();
+  }
+});
+
+/* ---------- top controls ---------- */
+$('#mo').addEventListener('change',()=>{S.m=+$('#mo').value;refreshHints();generateNow();save();renderAll();say('Jadwal dibuat untuk '+title(MONTHS[S.m-1])+' '+S.y);});
+$('#yr').addEventListener('change',()=>{
+  const v=parseInt($('#yr').value,10);
+  if(!(v>=2020&&v<=2100)){$('#yr').value=S.y;return;}
+  S.y=v;refreshHints();generateNow();save();renderAll();say('Jadwal dibuat untuk '+title(MONTHS[S.m-1])+' '+S.y);
+});
+$('#store').addEventListener('input',()=>{S.store=$('#store').value;$('#rtStore').textContent=S.store.toUpperCase();save();});
+$('#go').addEventListener('click',()=>{generateNow();save();renderAll();say('Jadwal baru sudah dibuat');});
+
+/* ---------- copy for Excel ---------- */
+const EXP={g:{pj:'#2ed3e8',csa:'#f4e04d',book:'#8eaadb',nonbook:'#b9a9dd',sac:'#e8873a',pkl:'#8fcbdc',sec:'#f6bd8c'},
+  k:{X:['#ffd9d2','#9c2511'],CT:['#ffe9a8','#6d4a00'],OP:['#e0d9ff','#43339a'],M:['#cfe9f6','#0b4a6e'],S:['#e6eff9','#13202b']}};
+function buildExport(){
+  const r=S.result,n=r.days;
+  const titleTxt='JADWAL OPERASIONAL '+MONTHS[r.m-1]+' '+r.y;
+  const tsv=[S.store.toUpperCase(),titleTxt,''];
+  const bd='border:1px solid #9fb0bb;text-align:center;font:12px Arial;padding:2px 4px;';
+  let h='<table style="border-collapse:collapse"><tr><td colspan="'+(n+5)+'" style="font:bold 14px Arial">'+esc(S.store.toUpperCase())+'</td></tr><tr><td colspan="'+(n+5)+'" style="font:bold 13px Arial">'+titleTxt+'</td></tr>';
+  GROUPS.forEach(g=>{
+    const list=S.emps.filter(e=>e.g===g.id);if(!list.length)return;
+    const dn=[],dw=[];for(let d=1;d<=n;d++){dn.push(d);dw.push(DOW[dowOf(r.y,r.m,d)]);}
+    tsv.push([g.name,''].concat(dn,['X','CT','OP']).join('\t'));
+    tsv.push(['',''].concat(dw,['','','']).join('\t'));
+    h+='<tr><td colspan="2" rowspan="2" style="'+bd+'background:'+EXP.g[g.id]+';font-weight:bold">'+g.name+'</td>';
+    dn.forEach((d,i)=>{const sun=dowOf(r.y,r.m,d)===0;h+='<td style="'+bd+(sun?'background:#d62828;color:#fff;':'background:#f3f6f8;')+'">'+d+'</td>';});
+    h+='<td rowspan="2" style="'+bd+'background:#f3f6f8">X</td><td rowspan="2" style="'+bd+'background:#f3f6f8">CT</td><td rowspan="2" style="'+bd+'background:#f3f6f8">OP</td></tr><tr>';
+    dw.forEach((w,i)=>{const sun=dowOf(r.y,r.m,i+1)===0;h+='<td style="'+bd+(sun?'background:#d62828;color:#fff;':'background:#f3f6f8;')+'">'+w+'</td>';});
+    h+='</tr>';
+    list.forEach((e,i)=>{
+      const row=r.sched[e.id]||[],c=counts(row);
+      tsv.push([i+1,e.name].concat(row,[c.x,c.ct,c.op]).join('\t'));
+      h+='<tr><td style="'+bd+'">'+(i+1)+'</td><td style="'+bd+'text-align:left;font-weight:bold">'+esc(e.name)+'</td>';
+      row.forEach(code=>{const k=EXP.k[code];h+='<td style="'+bd+(k?'background:'+k[0]+';color:'+k[1]+';':'')+'">'+code+'</td>';});
+      h+='<td style="'+bd+'">'+c.x+'</td><td style="'+bd+'">'+c.ct+'</td><td style="'+bd+'">'+c.op+'</td></tr>';
+    });
+    tsv.push('');
+  });
+  h+='</table>';
+  return {tsv:tsv.join('\n'),html:h};
+}
+$('#copy').addEventListener('click',async()=>{
+  if(!S.result)return;
+  const {tsv,html}=buildExport();
+  const fb=$('#fallback');fb.hidden=true;
+  try{
+    if(window.ClipboardItem&&navigator.clipboard&&navigator.clipboard.write){
+      await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([tsv],{type:'text/plain'})})]);
+    }else{await navigator.clipboard.writeText(tsv);}
+    say('Tabel disalin. Tempel di Excel atau Google Sheets.');$('#copy').textContent='Tersalin';
+    setTimeout(()=>{$('#copy').textContent='Salin tabel untuk Excel';},2000);
+  }catch(e1){
+    try{await navigator.clipboard.writeText(tsv);say('Tabel disalin sebagai teks.');}
+    catch(e2){fb.hidden=false;const ta=$('#fbText');ta.value=tsv;ta.focus();ta.select();}
+  }
+});
+
+/* ---------- boot ---------- */
+load();
+if(!S.result)S.result=generate(S.y,S.m,S.emps,S.seed);
+renderAll();
+})();
+</script>
+
+</body></html>
